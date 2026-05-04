@@ -9,6 +9,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 from dotenv import load_dotenv
 
+import warnings
+warnings.filterwarnings("ignore")
+
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
@@ -69,22 +72,7 @@ def run_tts(text: str, use_hindi_voice: bool, stop_only: bool = False) -> None:
     if not spoken_text:
         return
 
-    components.html(
-        f"""
-        <script>
-            (function() {{
-                if (!window.speechSynthesis) return;
-                window.speechSynthesis.cancel();
-                const utter = new SpeechSynthesisUtterance({text_json});
-                utter.lang = '{lang}';
-                utter.rate = 1.0;
-                utter.pitch = 1.0;
-                window.speechSynthesis.speak(utter);
-            }})();
-        </script>
-        """,
-        height=0,
-    )
+    components.html( f""" <script> (function() {{ if (!window.speechSynthesis) return; window.speechSynthesis.cancel(); const utter = new SpeechSynthesisUtterance({text_json}); utter.lang = '{lang}'; utter.rate = 1.0; utter.pitch = 1.0; window.speechSynthesis.speak(utter); }})(); </script> """, height=0, )
 
 
 def build_retrieval_query(raw_query: str) -> str:
@@ -123,7 +111,7 @@ with st.sidebar:
     st.caption(f"Provider: {provider}")
     hindi_mode = st.toggle("Talk in Hindi", value=default_hindi_mode)
     st.caption(f"Retrieved chunks: {top_k}")
-    refresh_index = st.button("Rebuild PDF Index")
+    refresh_index = st.button("Rebuild PDF Index", disabled=st.session_state.get("processing", False))
 
 data_dir = ROOT_DIR / "data"
 db_dir = ROOT_DIR / "vector_store"
@@ -154,6 +142,9 @@ if "tts_target_id" not in st.session_state:
 
 if "tts_command" not in st.session_state:
     st.session_state.tts_command = None
+
+if "processing" not in st.session_state:
+    st.session_state.processing = False
 
 for idx, msg in enumerate(st.session_state.messages, start=1):
     if "id" not in msg:
@@ -189,6 +180,7 @@ for msg in st.session_state.messages:
                 key=f"tts_toggle_{msg['id']}",
                 icon=icon_name,
                 help=help_text,
+                disabled=st.session_state.processing,
             ):
                 if is_active:
                     st.session_state.tts_command = {"action": "stop"}
@@ -219,6 +211,7 @@ if query:
             st.rerun()
         else:
             try:
+                st.session_state.processing = True
                 with st.spinner("Retrieving context and generating answer..."):
                     result = pipeline.answer(
                         query=retrieval_query,
@@ -235,6 +228,8 @@ if query:
                     {"id": assistant_id, "role": "assistant", "content": error_text}
                 )
                 st.rerun()
+            finally:
+                st.session_state.processing = False
 
             st.markdown(result["answer"])
 

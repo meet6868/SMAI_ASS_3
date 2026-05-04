@@ -1,0 +1,135 @@
+<svg width="1800" height="1200" viewBox="0 0 1800 1200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1f2937"/>
+    </marker>
+    <style>
+      .title { font: 700 38px Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 500 19px Arial, sans-serif; fill: #334155; }
+      .section { font: 700 24px Arial, sans-serif; fill: #0f172a; }
+      .box-title { font: 700 20px Arial, sans-serif; fill: #0f172a; }
+      .box-text { font: 500 16px Arial, sans-serif; fill: #1f2937; }
+      .step { font: 700 18px Arial, sans-serif; fill: #ffffff; }
+      .note { font: 500 15px Arial, sans-serif; fill: #334155; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1800" height="1200" fill="#f8fafc"/>
+  <rect x="30" y="30" width="1740" height="1140" rx="24" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+
+  <text x="70" y="95" class="title">Voter ID / EPIC Assistant - Complete Project Flow</text>
+  <text x="70" y="130" class="subtitle">Simple view: user asks a question, system searches PDF evidence, then answers with citations.</text>
+
+  <text x="70" y="190" class="section">A) One-time Knowledge Setup (Index Building)</text>
+
+  <rect x="70" y="220" width="260" height="120" rx="14" fill="#e0f2fe" stroke="#0ea5e9" stroke-width="2"/>
+  <text x="90" y="258" class="box-title">Official PDFs</text>
+  <text x="90" y="286" class="box-text">Files from data/ folder</text>
+  <text x="90" y="312" class="box-text">(Form_6, Form_7, etc.)</text>
+
+  <rect x="380" y="220" width="280" height="120" rx="14" fill="#ecfccb" stroke="#84cc16" stroke-width="2"/>
+  <text x="400" y="258" class="box-title">Text Extraction</text>
+  <text x="400" y="286" class="box-text">Read PDF page by page</text>
+  <text x="400" y="312" class="box-text">Clean noisy text</text>
+
+  <rect x="710" y="220" width="280" height="120" rx="14" fill="#fef9c3" stroke="#eab308" stroke-width="2"/>
+  <text x="730" y="258" class="box-title">Chunking</text>
+  <text x="730" y="286" class="box-text">Split big text into small parts</text>
+  <text x="730" y="312" class="box-text">Keep source + page metadata</text>
+
+  <rect x="1040" y="220" width="300" height="120" rx="14" fill="#fee2e2" stroke="#ef4444" stroke-width="2"/>
+  <text x="1060" y="258" class="box-title">Embeddings</text>
+  <text x="1060" y="286" class="box-text">Convert text to vectors using</text>
+  <text x="1060" y="312" class="box-text">all-MiniLM-L6-v2</text>
+
+  <rect x="1390" y="220" width="330" height="120" rx="14" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="1410" y="258" class="box-title">Vector Store</text>
+  <text x="1410" y="286" class="box-text">Save vectors in ChromaDB</text>
+  <text x="1410" y="312" class="box-text">(folder: vector_store/)</text>
+
+  <line x1="330" y1="280" x2="380" y2="280" stroke="#1f2937" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="660" y1="280" x2="710" y2="280" stroke="#1f2937" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="990" y1="280" x2="1040" y2="280" stroke="#1f2937" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="1340" y1="280" x2="1390" y2="280" stroke="#1f2937" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <circle cx="90" cy="216" r="15" fill="#0ea5e9"/>
+  <text x="84" y="223" class="step">1</text>
+  <circle cx="400" cy="216" r="15" fill="#84cc16"/>
+  <text x="394" y="223" class="step">2</text>
+  <circle cx="730" cy="216" r="15" fill="#eab308"/>
+  <text x="724" y="223" class="step">3</text>
+  <circle cx="1060" cy="216" r="15" fill="#ef4444"/>
+  <text x="1054" y="223" class="step">4</text>
+  <circle cx="1410" cy="216" r="15" fill="#8b5cf6"/>
+  <text x="1404" y="223" class="step">5</text>
+
+  <text x="70" y="420" class="section">B) Runtime Question Answering (What happens for each user message)</text>
+
+  <rect x="70" y="450" width="260" height="120" rx="14" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="90" y="488" class="box-title">User Question</text>
+  <text x="90" y="516" class="box-text">Typed in Streamlit chat</text>
+  <text x="90" y="542" class="box-text">Example: How to apply?</text>
+
+  <rect x="380" y="450" width="300" height="120" rx="14" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="400" y="488" class="box-title">Retriever</text>
+  <text x="400" y="516" class="box-text">Search similar chunks in</text>
+  <text x="400" y="542" class="box-text">ChromaDB using query embedding</text>
+
+  <rect x="730" y="450" width="320" height="120" rx="14" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="750" y="488" class="box-title">Evidence Package</text>
+  <text x="750" y="516" class="box-text">Top relevant chunks</text>
+  <text x="750" y="542" class="box-text">+ source file + page number</text>
+
+  <rect x="1100" y="450" width="290" height="120" rx="14" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+  <text x="1120" y="488" class="box-title">LLM Generation</text>
+  <text x="1120" y="516" class="box-text">Google Gemini or Groq</text>
+  <text x="1120" y="542" class="box-text">Answer from evidence only</text>
+
+  <rect x="1440" y="450" width="280" height="120" rx="14" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="1460" y="488" class="box-title">Final Response</text>
+  <text x="1460" y="516" class="box-text">Answer shown in chat</text>
+  <text x="1460" y="542" class="box-text">with source citations</text>
+
+  <line x1="330" y1="510" x2="380" y2="510" stroke="#1f2937" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="680" y1="510" x2="730" y2="510" stroke="#1f2937" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="1050" y1="510" x2="1100" y2="510" stroke="#1f2937" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="1390" y1="510" x2="1440" y2="510" stroke="#1f2937" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <circle cx="90" cy="446" r="15" fill="#2563eb"/>
+  <text x="84" y="453" class="step">1</text>
+  <circle cx="400" cy="446" r="15" fill="#16a34a"/>
+  <text x="394" y="453" class="step">2</text>
+  <circle cx="750" cy="446" r="15" fill="#d97706"/>
+  <text x="744" y="453" class="step">3</text>
+  <circle cx="1120" cy="446" r="15" fill="#dc2626"/>
+  <text x="1114" y="453" class="step">4</text>
+  <circle cx="1460" cy="446" r="15" fill="#7c3aed"/>
+  <text x="1454" y="453" class="step">5</text>
+
+  <text x="70" y="655" class="section">C) Trust and Quality Controls</text>
+
+  <rect x="70" y="680" width="540" height="140" rx="14" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+  <text x="90" y="718" class="box-title">Grounding Rule</text>
+  <text x="90" y="746" class="box-text">Prompt tells model: answer only from retrieved evidence.</text>
+  <text x="90" y="772" class="box-text">If evidence is missing, say clearly that information is insufficient.</text>
+
+  <rect x="650" y="680" width="540" height="140" rx="14" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+  <text x="670" y="718" class="box-title">Citations</text>
+  <text x="670" y="746" class="box-text">Every response includes source references from metadata:</text>
+  <text x="670" y="772" class="box-text">file name + page number.</text>
+
+  <rect x="1230" y="680" width="490" height="140" rx="14" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+  <text x="1250" y="718" class="box-title">Optional Hindi Mode</text>
+  <text x="1250" y="746" class="box-text">Sidebar toggle changes response language only.</text>
+  <text x="1250" y="772" class="box-text">Retrieval pipeline remains the same.</text>
+
+  <text x="70" y="905" class="section">D) Where Things Live in Code</text>
+  <text x="70" y="940" class="note">- UI and chat handling: app/main.py</text>
+  <text x="70" y="968" class="note">- End-to-end RAG pipeline: src/voter_assistant/knowledge_assistant.py</text>
+  <text x="70" y="996" class="note">- Source PDFs: data/</text>
+  <text x="70" y="1024" class="note">- Vector DB storage: vector_store/</text>
+  <text x="70" y="1052" class="note">- Runtime config and keys: .env</text>
+
+  <rect x="70" y="1080" width="1650" height="60" rx="10" fill="#e2e8f0"/>
+  <text x="90" y="1118" class="box-text">In simple words: the app does not memorize voter rules. It searches official PDFs first, then answers from those found lines with citations.</text>
+</svg>

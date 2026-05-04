@@ -1,0 +1,185 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{cite}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{float}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Voter ID / EPIC Assistant}
+\lhead{Team Vibe Code}
+\cfoot{Page \thepage\ of \pageref{LastPage}}
+
+\setlength{\headheight}{14pt}
+\onehalfspacing
+
+\title{\textbf{Voter ID / EPIC Assistant}\\
+A Retrieval-Augmented Generation (RAG) Chatbot for Government Services}
+
+\author{
+\textbf{Team: Vibe Code} \\
+\\
+Param Modi (2025201087) \\
+Meet Ghelani (2025201096) \\
+Pratee Tiwari (2025201037)
+}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{center}
+\textbf{GitHub:} \url{https://github.com/meet6868/SMAI_ASS_3} \\[4pt]
+\textbf{Live App:} \url{https://ndt6ujti6anrngsjgcdllp.streamlit.app/}
+\end{center}
+
+\begin{abstract}
+This report presents a Retrieval-Augmented Generation (RAG) based chatbot designed to assist users in accessing Indian voter ID (EPIC) related services. The system retrieves relevant information from official government PDFs and generates grounded responses using large language models. It avoids model training by leveraging semantic search and external APIs. The final system is deployed as an interactive Streamlit application and supports both English and Hinglish queries.
+\end{abstract}
+
+\section{Introduction}
+
+Accessing government services often requires users to go through multiple documents that are not easy to navigate. In the case of voter ID services, users must manually read different forms and instructions, which can be time-consuming and confusing.
+
+To simplify this process, we developed a chatbot that allows users to ask questions in natural language. Instead of searching manually, the system retrieves relevant information from official documents and presents it in a clear and concise manner. Each answer is supported with citations, ensuring that the information is trustworthy.
+
+\section{Data}
+
+The system uses official voter-related forms as its data source. These include Form 6, Form 6A, Form 7, and Form 8, which cover registration, correction, and deletion processes.
+
+The PDFs are processed through a pipeline where text is extracted, cleaned, and divided into smaller chunks. Each chunk retains metadata such as file name and page number. This metadata is later used to provide citations in the final response.
+
+\section{Method}
+
+\subsection{System Overview}
+
+The system follows a Retrieval-Augmented Generation pipeline, where retrieval and generation are clearly separated. The overall workflow is shown in Figure~\ref{fig:pipeline}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{/home/hp/SEM2/SMAI/Assingment/SMAI_Project/docs/diagrams/architecture_flow.png}
+\caption{RAG pipeline showing document processing, embedding, retrieval, and answer generation stages.}
+\label{fig:pipeline}
+\end{figure}
+
+The pipeline begins by converting PDFs into text and dividing them into overlapping chunks. These chunks are then converted into embeddings and stored in a vector database. During query time, the system retrieves the most relevant chunks and passes them to a language model, which generates the final answer.
+
+\subsection{Embedding and Retrieval}
+
+We use the \texttt{all-MiniLM-L6-v2} model to generate embeddings. This model is efficient and suitable for CPU-based environments. The embeddings are stored in ChromaDB, which enables fast similarity search.
+
+At runtime:
+\begin{itemize}
+    \item The user query is converted into an embedding
+    \item Similar chunks are retrieved using cosine similarity
+    \item Top-$k$ relevant chunks are selected as context
+\end{itemize}
+
+\subsection{Answer Generation}
+
+The retrieved chunks are passed to a language model (Gemini or Groq Llama-3). The prompt ensures that the model generates answers strictly based on the provided context. The output also includes citations pointing to the source documents.
+
+\subsection{Query Handling}
+
+To improve usability, the system includes a simple query expansion mechanism. For example, informal queries such as ``name change karna hai'' are expanded with voter-related context to improve retrieval accuracy.
+
+\section{User Interface}
+
+The system is deployed using Streamlit and provides a chat-based interface. Users can enter queries and receive responses in real time.
+
+Key features include:
+\begin{itemize}
+    \item Chat interface using \texttt{st.chat\_input}
+    \item Display of answers with citations
+    \item Optional Hindi response mode
+    \item Text-to-speech support for responses
+\end{itemize}
+
+\section{Results}
+
+The system was evaluated using several sample queries related to voter ID services. It was observed that the chatbot retrieves relevant information and generates useful responses.
+
+In most cases:
+\begin{itemize}
+    \item Retrieved documents were relevant to the query
+    \item Responses were grounded in the retrieved context
+    \item Citations correctly matched the source documents
+\end{itemize}
+
+The system also handled simple Hinglish queries reasonably well due to query expansion.
+
+
+\section{Ablation Study}
+
+Due to time and resource constraints, we did not perform a full quantitative ablation study across multiple configurations. Instead, we fixed a single pipeline setup that provided stable and reliable performance for our use case.
+
+We selected the \texttt{all-MiniLM-L6-v2} embedding model due to its efficiency and good semantic performance in general-purpose tasks. The chunk size and overlap were chosen empirically to balance context preservation and retrieval accuracy.
+
+We also fixed the number of retrieved chunks ($k=4$) to avoid excessive context while still providing sufficient information to the language model.
+
+Although no systematic ablation experiments were conducted, informal testing indicated that:
+\begin{itemize}
+    \item Very small chunk sizes reduced context quality
+    \item Very large chunks reduced retrieval precision
+    \item Increasing $k$ beyond 4 did not significantly improve answers but increased latency
+\end{itemize}
+
+Future work can include controlled experiments to evaluate the impact of chunk size, retrieval depth, and different embedding models.
+
+\section{Limitations}
+
+Despite good performance, the system has some limitations:
+\begin{itemize}
+    \item Limited dataset (only a few PDF forms)
+    \item Dependence on external LLM APIs
+    \item Limited multilingual support
+    \item Requires re-indexing when documents change
+\end{itemize}
+
+\section{Conclusion}
+
+This project demonstrates how a RAG-based system can be used to build an effective domain-specific chatbot without training a model. By combining retrieval with language generation, the system provides accurate and explainable responses. The deployed application highlights the practical usefulness of such systems in improving access to government services.
+
+\section*{Team Contribution}
+
+\begin{itemize}
+    \item \textbf{Param Modi (2025201087)}: Developed the core RAG pipeline
+    \item \textbf{Meet Ghelani (2025201096)}: Deployment and report writing
+    \item \textbf{Pratee Tiwari (2025201037)}: Streamlit UI development
+\end{itemize}
+
+\section*{Team Discussion}
+
+All team members contributed to system design decisions, including architecture, model selection, and integration. The final system is a result of collaborative development and iterative improvements.
+
+\section{References}
+
+\begin{thebibliography}{99}
+
+\bibitem{rag}
+Lewis et al., Retrieval-Augmented Generation, NeurIPS 2020
+
+\bibitem{sbert}
+Reimers \& Gurevych, Sentence-BERT, EMNLP 2019
+
+\bibitem{chromadb}
+ChromaDB Documentation
+
+\bibitem{nvsp}
+\url{https://www.nvsp.in}
+
+\bibitem{eci}
+\url{https://eci.gov.in}
+
+\end{thebibliography}
+
+\end{document}

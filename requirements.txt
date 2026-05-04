@@ -6,3 +6,4 @@ groq
 pypdf
 python-dotenv
 numpy
+torchvision

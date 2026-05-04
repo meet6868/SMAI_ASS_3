@@ -13,6 +13,9 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 import streamlit as st
 
+from transformers import logging
+logging.set_verbosity_error()
+
 
 @dataclass
 class ChunkRecord:
