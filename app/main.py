@@ -2,6 +2,8 @@ import json
 import os
 import re
 import sys
+import csv
+import datetime as dt
 from pathlib import Path
 from typing import Optional
 
@@ -86,6 +88,24 @@ def build_retrieval_query(raw_query: str) -> str:
     return f"{query} voter id"
 
 
+def _ensure_parent_dir(file_path: Path) -> None:
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def _append_metrics_row(file_path: Path, row: dict, header: list) -> None:
+    _ensure_parent_dir(file_path)
+    write_header = not file_path.exists()
+    with file_path.open("a", newline="") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=header)
+        if write_header:
+            writer.writeheader()
+        writer.writerow(row)
+
+
+def _bytes_to_mb(value: int) -> float:
+    return round(value / (1024 * 1024), 2)
+
+
 st.set_page_config(page_title="Voter ID / EPIC Assistant", page_icon="🗳️", layout="wide")
 st.title("Voter ID / EPIC Assistant")
 st.caption("Ask voter service questions grounded in official PDF documents.")
@@ -115,6 +135,24 @@ with st.sidebar:
 
 data_dir = ROOT_DIR / "data"
 db_dir = ROOT_DIR / "vector_store"
+metrics_path = ROOT_DIR / "data" / "metrics.csv"
+metrics_columns = [
+    "timestamp",
+    "provider",
+    "query",
+    "top_k",
+    "hindi",
+    "retrieve_ms",
+    "generate_ms",
+    "end_to_end_ms",
+    "prompt_chars",
+    "answer_chars",
+    "prompt_tokens_est",
+    "answer_tokens_est",
+    "contexts",
+    "rss_mb",
+    "vms_mb",
+]
 
 
 @st.cache_resource(show_spinner=False)
@@ -126,8 +164,17 @@ pipeline = load_pipeline()
 
 if refresh_index:
     with st.spinner("Rebuilding index from PDF files..."):
-        pipeline.build_index(force_rebuild=True)
+        index_metrics = pipeline.build_index(force_rebuild=True)
     st.success("Index rebuilt successfully.")
+    if index_metrics:
+        st.caption(
+            "Index build: "
+            f"total {index_metrics.get('index_total_ms', 0):.1f} ms, "
+            f"extract {index_metrics.get('extract_ms', 0):.1f} ms, "
+            f"embed {index_metrics.get('embed_ms', 0):.1f} ms, "
+            f"upsert {index_metrics.get('upsert_ms', 0):.1f} ms, "
+            f"chunks {index_metrics.get('chunks', 0)}."
+        )
 
 if "ready" not in st.session_state:
     with st.spinner("Preparing knowledge index..."):
@@ -145,6 +192,9 @@ if "tts_command" not in st.session_state:
 
 if "processing" not in st.session_state:
     st.session_state.processing = False
+
+if "index_metrics" not in st.session_state:
+    st.session_state.index_metrics = None
 
 for idx, msg in enumerate(st.session_state.messages, start=1):
     if "id" not in msg:
@@ -232,6 +282,55 @@ if query:
                 st.session_state.processing = False
 
             st.markdown(result["answer"])
+
+            metrics = result.get("metrics", {})
+            if metrics:
+                try:
+                    import psutil
+                    process = psutil.Process(os.getpid())
+                    mem_info = process.memory_info()
+                    rss_mb = _bytes_to_mb(mem_info.rss)
+                    vms_mb = _bytes_to_mb(mem_info.vms)
+                except Exception:
+                    rss_mb = 0.0
+                    vms_mb = 0.0
+
+                row = {
+                    "timestamp": dt.datetime.utcnow().isoformat(timespec="seconds"),
+                    "provider": provider,
+                    "query": query,
+                    "top_k": top_k,
+                    "hindi": hindi_mode,
+                    "retrieve_ms": round(metrics.get("retrieve_ms", 0.0), 2),
+                    "generate_ms": round(metrics.get("generate_ms", 0.0), 2),
+                    "end_to_end_ms": round(metrics.get("end_to_end_ms", 0.0), 2),
+                    "prompt_chars": metrics.get("prompt_chars", 0),
+                    "answer_chars": metrics.get("answer_chars", 0),
+                    "prompt_tokens_est": metrics.get("prompt_tokens_est", 0),
+                    "answer_tokens_est": metrics.get("answer_tokens_est", 0),
+                    "contexts": metrics.get("contexts", 0),
+                    "rss_mb": rss_mb,
+                    "vms_mb": vms_mb,
+                }
+                _append_metrics_row(metrics_path, row, metrics_columns)
+
+                with st.expander("Latency and size metrics"):
+                    st.markdown(
+                        "\n".join(
+                            [
+                                f"- Retrieve: {row['retrieve_ms']} ms",
+                                f"- Generate: {row['generate_ms']} ms",
+                                f"- End-to-end: {row['end_to_end_ms']} ms",
+                                f"- Prompt chars: {row['prompt_chars']}",
+                                f"- Answer chars: {row['answer_chars']}",
+                                f"- Prompt tokens (est.): {row['prompt_tokens_est']}",
+                                f"- Answer tokens (est.): {row['answer_tokens_est']}",
+                                f"- Contexts: {row['contexts']}",
+                                f"- RSS MB: {row['rss_mb']}",
+                                f"- VMS MB: {row['vms_mb']}",
+                            ]
+                        )
+                    )
 
             if result["citations"]:
                 st.markdown("**Sources**")

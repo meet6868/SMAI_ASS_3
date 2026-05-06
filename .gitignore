@@ -20,3 +20,4 @@ __pychache__/
 *.egg-info/
 dist/
 build/
+metrics.csv

@@ -92,6 +92,24 @@ The retrieved chunks are passed to a language model (Gemini or Groq Llama-3). Th
 
 To improve usability, the system includes a simple query expansion mechanism. For example, informal queries such as ``name change karna hai'' are expanded with voter-related context to improve retrieval accuracy.
 
+\subsection{Key Insights}
+
+From our experiments and usage, we observed several important behaviors of the system:
+
+\begin{itemize}
+    \item \textbf{Retrieval dominates performance:} The quality of the final answer depends heavily on the retrieved chunks. If retrieval fails, the language model produces weak or incomplete answers.
+    
+    \item \textbf{Chunk size trade-off:} Smaller chunks improve retrieval precision but sometimes lose context, while larger chunks preserve context but may reduce retrieval accuracy.
+    
+    \item \textbf{Query expansion is effective:} Simple keyword-based expansion significantly improves performance for Hinglish queries without requiring multilingual embeddings.
+    
+    \item \textbf{LLM variability:} Different LLM providers (Gemini vs Groq) show noticeable differences in response style and latency, even when given the same context.
+    
+    \item \textbf{Latency bottleneck:} Most of the response time comes from the generation step rather than retrieval.
+\end{itemize}
+
+
+
 \section{User Interface}
 
 The system is deployed using Streamlit and provides a chat-based interface. Users can enter queries and receive responses in real time.
@@ -103,6 +121,44 @@ Key features include:
     \item Optional Hindi response mode
     \item Text-to-speech support for responses
 \end{itemize}
+
+\subsection{Interface Snapshots}
+
+Figure~\ref{fig:ui-loading} shows the initial loading state of the deployed Streamlit app.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{../Images/1.png}
+\caption{Streamlit app loading state on deployment.}
+\label{fig:ui-loading}
+\end{figure}
+
+Figure~\ref{fig:ui-english} illustrates an English query with a grounded response and citations.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{../Images/2.png}
+\caption{English query and answer with sources.}
+\label{fig:ui-english}
+\end{figure}
+
+Figure~\ref{fig:ui-hinglish} shows a Hinglish query where the assistant returns an English response.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{../Images/3.png}
+\caption{Hinglish query with English response.}
+\label{fig:ui-hinglish}
+\end{figure}
+
+Figure~\ref{fig:ui-hindi} demonstrates a Hinglish query with Hindi response mode enabled.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{../Images/4.png}
+\caption{Hinglish query with Hindi response.}
+\label{fig:ui-hindi}
+\end{figure}
 
 \section{Results}
 
@@ -116,6 +172,33 @@ In most cases:
 \end{itemize}
 
 The system also handled simple Hinglish queries reasonably well due to query expansion.
+
+\subsection{Performance Measurements}
+
+We instrumented the application to record retrieval time, generation time, end-to-end latency, and response sizes. The Streamlit app logs each query to a CSV file with prompt/answer size estimates and process memory usage. Table~\ref{tab:latency} reports the measured values from \texttt{data/metrics.csv}.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.05}
+\makebox[\textwidth][c]{%
+\begin{tabular}{p{5.4cm}rrrrrr}
+\toprule
+Query & Retrieve (ms) & Generate (ms) & End-to-end (ms) & Prompt chars & Answer chars & RSS (MB) \\
+\midrule
+I wanrt to create Voter Id & 26.59 & 6841.86 & 8879.71 & 4894 & 765 & 1276.04 \\
+Muje name and addgress chnage karana hai & 25.10 & 6987.82 & 7012.96 & 4917 & 798 & 1277.55 \\
+Muje dob chnage karani hai & 25.16 & 15174.23 & 15199.42 & 4966 & 414 & 1278.48 \\
+Muje mobile no update karana hai & 25.02 & 27217.31 & 27242.38 & 4968 & 421 & 1278.80 \\
+What is EPIC in voter ID? & 28.22 & 4980.10 & 5008.38 & 4892 & 381 & 1278.94 \\
+How to delete my name from voter list? & 23.13 & 11578.59 & 11601.76 & 4914 & 1019 & 1279.20 \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Latency and resource measurements collected from the deployed app.}
+\label{tab:latency}
+\end{table}
 
 
 \section{Ablation Study}

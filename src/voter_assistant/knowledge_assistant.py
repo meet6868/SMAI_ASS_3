@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List
 import re
+import time
+import math
 
 import chromadb
 import google.generativeai as genai
@@ -151,7 +153,8 @@ class RAGPipeline:
         vectors = _l2_normalize(vectors)
         return vectors.tolist()
 
-    def build_index(self, force_rebuild: bool = False) -> None:
+    def build_index(self, force_rebuild: bool = False) -> Dict:
+        start_total = time.perf_counter()
         client = self._get_client()
         if force_rebuild:
             try:
@@ -163,17 +166,36 @@ class RAGPipeline:
 
         try:
             if not force_rebuild and collection.count() > 0:
-                return
+                return {
+                    "index_total_ms": 0.0,
+                    "extract_ms": 0.0,
+                    "embed_ms": 0.0,
+                    "upsert_ms": 0.0,
+                    "chunks": 0,
+                    "status": "skipped",
+                }
         except Exception:
             pass
 
+        extract_start = time.perf_counter()
         records = self._extract_chunks()
+        extract_ms = (time.perf_counter() - extract_start) * 1000
         if not records:
-            return
+            return {
+                "index_total_ms": (time.perf_counter() - start_total) * 1000,
+                "extract_ms": extract_ms,
+                "embed_ms": 0.0,
+                "upsert_ms": 0.0,
+                "chunks": 0,
+                "status": "empty",
+            }
 
         docs = [r.text for r in records]
+        embed_start = time.perf_counter()
         vectors = self._embed_texts(docs)
+        embed_ms = (time.perf_counter() - embed_start) * 1000
 
+        upsert_start = time.perf_counter()
         collection.upsert(
             ids=[r.chunk_id for r in records],
             documents=docs,
@@ -193,6 +215,17 @@ class RAGPipeline:
                 client.persist()
         except Exception:
             pass
+
+        upsert_ms = (time.perf_counter() - upsert_start) * 1000
+
+        return {
+            "index_total_ms": (time.perf_counter() - start_total) * 1000,
+            "extract_ms": extract_ms,
+            "embed_ms": embed_ms,
+            "upsert_ms": upsert_ms,
+            "chunks": len(records),
+            "status": "rebuilt" if force_rebuild else "built",
+        }
 
     def retrieve(self, query: str, top_k: int = 4) -> List[Dict]:
         collection = self._get_or_create_collection()
@@ -254,6 +287,13 @@ class RAGPipeline:
             "Evidence:\n"
             + "\n\n".join(evidence_lines)
         )
+
+    @staticmethod
+    def _estimate_tokens(text: str) -> int:
+        length = len(text or "")
+        if length <= 0:
+            return 0
+        return int(math.ceil(length / 4))
 
     @staticmethod
     def _google_model_candidates() -> List[str]:
@@ -364,16 +404,30 @@ class RAGPipeline:
         top_k: int = 4,
         hindi: bool = False,
     ) -> Dict:
+        total_start = time.perf_counter()
+        retrieve_start = time.perf_counter()
         contexts = self.retrieve(query=query, top_k=top_k)
+        retrieve_ms = (time.perf_counter() - retrieve_start) * 1000
         if not contexts:
             return {
                 "answer": "No indexed PDF content is available yet. Please rebuild the index and try again.",
                 "citations": [],
                 "contexts": [],
+                "metrics": {
+                    "retrieve_ms": retrieve_ms,
+                    "generate_ms": 0.0,
+                    "end_to_end_ms": (time.perf_counter() - total_start) * 1000,
+                    "prompt_chars": 0,
+                    "answer_chars": 0,
+                    "prompt_tokens_est": 0,
+                    "answer_tokens_est": 0,
+                    "contexts": 0,
+                },
             }
 
         prompt = self._build_prompt(query=query, contexts=contexts, hindi=hindi)
 
+        generate_start = time.perf_counter()
         answer = self._generate(provider=provider, api_key=api_key, prompt=prompt)
 
         # Some model responses ignore language instruction intermittently.
@@ -384,8 +438,24 @@ class RAGPipeline:
             if rewritten.strip():
                 answer = rewritten.strip()
 
+        generate_ms = (time.perf_counter() - generate_start) * 1000
+        prompt_chars = len(prompt)
+        answer_chars = len(answer)
+        prompt_tokens_est = self._estimate_tokens(prompt)
+        answer_tokens_est = self._estimate_tokens(answer)
+
         return {
             "answer": answer,
             "citations": self._dedupe_citations(contexts),
             "contexts": contexts,
+            "metrics": {
+                "retrieve_ms": retrieve_ms,
+                "generate_ms": generate_ms,
+                "end_to_end_ms": (time.perf_counter() - total_start) * 1000,
+                "prompt_chars": prompt_chars,
+                "answer_chars": answer_chars,
+                "prompt_tokens_est": prompt_tokens_est,
+                "answer_tokens_est": answer_tokens_est,
+                "contexts": len(contexts),
+            },
         }
